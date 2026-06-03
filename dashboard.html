@@ -26,7 +26,6 @@
       --red: #ef4444;
       --red-bg: rgba(239,68,68,0.12);
       --blue: #3b82f6;
-      --blue-bg: rgba(59,130,246,0.12);
       --font: 'IBM Plex Sans Thai', sans-serif;
       --mono: 'IBM Plex Mono', monospace;
     }
@@ -88,55 +87,10 @@
       border-radius: 8px;
       cursor: pointer;
       display: flex; align-items: center; gap: 6px;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s;
     }
-    .btn:hover { background: rgba(255,255,255,0.07); border-color: var(--border2); }
+    .btn:hover { background: rgba(255,255,255,0.07); }
     .btn svg { width: 14px; height: 14px; }
-
-    .url-section {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .url-label { font-size: 12px; color: var(--text2); white-space: nowrap; }
-
-    .url-input {
-      flex: 1;
-      min-width: 280px;
-      background: var(--bg3);
-      border: 1px solid var(--border2);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 8px 12px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .url-input:focus { border-color: var(--blue); }
-    .url-input::placeholder { color: var(--text3); }
-
-    .btn-load {
-      background: var(--blue);
-      border: none;
-      color: #fff;
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 8px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity 0.15s;
-    }
-    .btn-load:hover { opacity: 0.85; }
 
     .metrics {
       display: grid;
@@ -200,9 +154,7 @@
 
     .chart-title { font-size: 14px; font-weight: 500; }
 
-    .legend {
-      display: flex; gap: 14px; flex-wrap: wrap;
-    }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; }
     .legend-item {
       display: flex; align-items: center; gap: 5px;
       font-size: 11px; color: var(--text2);
@@ -254,8 +206,6 @@
       color: var(--text3); font-size: 13px;
     }
 
-    .last-update { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-
     @media (max-width: 520px) {
       body { padding: 16px; }
       .card-value { font-size: 22px; }
@@ -274,7 +224,7 @@
   </div>
   <div class="header-right">
     <div class="live-dot"></div>
-    <span class="live-text" id="live-text">รอข้อมูล</span>
+    <span class="live-text" id="live-text">กำลังโหลด...</span>
     <button class="btn" onclick="loadData()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       รีเฟรช
@@ -282,17 +232,10 @@
   </div>
 </div>
 
-<div class="url-section">
-  <span class="url-label">Google Sheet CSV</span>
-  <input class="url-input" id="sheet-url" type="text"
-    placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=0" />
-  <button class="btn-load" onclick="loadData()">โหลด</button>
-</div>
-
 <div class="metrics">
   <div class="card status-card" id="status-card">
     <div class="card-label">สถานะล่าสุด</div>
-    <div style="margin-bottom:6px;" id="m-status"><span class="pill normal"><span class="pill-dot" style="background:var(--green)"></span>รอข้อมูล</span></div>
+    <div style="margin-bottom:6px;" id="m-status"><span class="pill normal"><span class="pill-dot" style="background:var(--green)"></span>กำลังโหลด...</span></div>
     <div class="card-sub" id="m-time">—</div>
   </div>
   <div class="card">
@@ -339,12 +282,15 @@
       </tr>
     </thead>
     <tbody id="tbl-body">
-      <tr><td colspan="2" class="empty">ใส่ URL Google Sheet แล้วกด โหลด</td></tr>
+      <tr><td colspan="2" class="empty">กำลังโหลดข้อมูล...</td></tr>
     </tbody>
   </table>
 </div>
 
 <script>
+// ===== ฝัง CSV URL ไว้ตายตัว =====
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1x2tsldieIFOUt46FK93JCXgR4tvN2hbXj8ZyzbQ-6XY/export?format=csv&gid=0";
+
 let chart = null;
 
 const SCORE = { "ปกติ":1, "เริ่มมีควัน":2, "ควันปานกลาง":3, "ควันหนาแน่น":4, "อันตรายมาก":5 };
@@ -377,7 +323,6 @@ function render(data) {
   const parts = last[0].split(" ");
   document.getElementById("m-lasttime").textContent = parts[1] || "—";
   document.getElementById("m-lastdate").textContent = parts[0] || "—";
-
   document.getElementById("live-text").textContent = "Live";
 
   const recent = data.slice(-20);
@@ -390,13 +335,7 @@ function render(data) {
     type: "bar",
     data: {
       labels,
-      datasets: [{
-        data: scores,
-        backgroundColor: colors,
-        borderRadius: 4,
-        borderSkipped: false,
-        label: "ระดับ"
-      }]
+      datasets: [{ data: scores, backgroundColor: colors, borderRadius: 4, borderSkipped: false, label: "ระดับ" }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -404,49 +343,35 @@ function render(data) {
         legend: { display: false },
         tooltip: {
           callbacks: { label: ctx => recent[ctx.dataIndex][1] },
-          backgroundColor: "#1e2535",
-          titleColor: "#8b90a0",
-          bodyColor: "#e8eaf0",
-          borderColor: "rgba(255,255,255,0.08)",
-          borderWidth: 1
+          backgroundColor: "#1e2535", titleColor: "#8b90a0", bodyColor: "#e8eaf0",
+          borderColor: "rgba(255,255,255,0.08)", borderWidth: 1
         }
       },
       scales: {
         y: {
           min: 0, max: 6,
           ticks: {
-            stepSize: 1,
-            color: "#5a5f6e",
-            font: { size: 11 },
+            stepSize: 1, color: "#5a5f6e", font: { size: 11 },
             callback: v => (["","ปกติ","เริ่มมีควัน","ปานกลาง","หนาแน่น","อันตราย",""][v] || "")
           },
           grid: { color: "rgba(255,255,255,0.05)" }
         },
-        x: {
-          grid: { display: false },
-          ticks: { color: "#5a5f6e", font: { size: 10 }, maxRotation: 45 }
-        }
+        x: { grid: { display: false }, ticks: { color: "#5a5f6e", font: { size: 10 }, maxRotation: 45 } }
       }
     }
   });
 
-  const tbody = document.getElementById("tbl-body");
   const rows = [...data].reverse().slice(0, 20);
   document.getElementById("tbl-count").textContent = data.length + " รายการ";
-  tbody.innerHTML = rows.map(r =>
-    `<tr>
-      <td class="td-time">${r[0]}</td>
-      <td>${pillOf(r[1])}</td>
-    </tr>`
+  document.getElementById("tbl-body").innerHTML = rows.map(r =>
+    `<tr><td class="td-time">${r[0]}</td><td>${pillOf(r[1])}</td></tr>`
   ).join("");
 }
 
 async function loadData() {
-  const url = document.getElementById("sheet-url").value.trim();
-  if (!url) { alert("กรุณาใส่ URL ของ Google Sheet ก่อนครับ"); return; }
   document.getElementById("live-text").textContent = "กำลังโหลด...";
   try {
-    const res = await fetch(url);
+    const res = await fetch(CSV_URL);
     const text = await res.text();
     const lines = text.trim().split("\n").slice(1);
     const data = lines
@@ -459,9 +384,15 @@ async function loadData() {
     }
   } catch(e) {
     document.getElementById("live-text").textContent = "โหลดไม่ได้";
-    alert("โหลดข้อมูลไม่ได้ครับ — ตรวจสอบ URL และการแชร์ Sheet (ต้องเป็น Anyone can view)");
+    document.getElementById("tbl-body").innerHTML = '<tr><td colspan="2" class="empty">โหลดข้อมูลไม่ได้ — ตรวจสอบการแชร์ Sheet</td></tr>';
   }
 }
+
+// โหลดอัตโนมัติตอนเปิดหน้า
+loadData();
+
+// รีเฟรชอัตโนมัติทุก 30 วินาที
+setInterval(loadData, 30000);
 </script>
 </body>
 </html>
