@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smoke Monitor Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --bg2: #161b27;
+      --bg3: #1e2535;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #e8eaf0;
+      --text2: #8b90a0;
+      --text3: #5a5f6e;
+      --green: #22c55e;
+      --green-bg: rgba(34,197,94,0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245,158,11,0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239,68,68,0.12);
+      --blue: #3b82f6;
+      --blue-bg: rgba(59,130,246,0.12);
+      --font: 'IBM Plex Sans Thai', sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo {
+      width: 38px; height: 38px;
+      background: var(--red-bg);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+    .subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
+
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+
+    .live-text { font-size: 12px; color: var(--green); font-family: var(--mono); }
+
+    .btn {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.07); border-color: var(--border2); }
+    .btn svg { width: 14px; height: 14px; }
+
+    .url-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .url-label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+
+    .url-input {
+      flex: 1;
+      min-width: 280px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .url-input:focus { border-color: var(--blue); }
+    .url-input::placeholder { color: var(--text3); }
+
+    .btn-load {
+      background: var(--blue);
+      border: none;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-load:hover { opacity: 0.85; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .card-value {
+      font-size: 28px;
+      font-weight: 600;
+      font-family: var(--mono);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .card-sub { font-size: 12px; color: var(--text2); }
+
+    .status-card { border-left: 3px solid var(--border2); }
+    .status-card.normal { border-left-color: var(--green); }
+    .status-card.warn   { border-left-color: var(--amber); }
+    .status-card.danger { border-left-color: var(--red); }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 13px; font-weight: 500;
+    }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .pill.normal { background: var(--green-bg); color: var(--green); }
+    .pill.warn   { background: var(--amber-bg); color: var(--amber); }
+    .pill.danger { background: var(--red-bg);   color: var(--red); }
+
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+    }
+
+    .chart-title { font-size: 14px; font-weight: 500; }
+
+    .legend {
+      display: flex; gap: 14px; flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--text2);
+    }
+    .legend-box { width: 10px; height: 10px; border-radius: 2px; }
+
+    .chart-wrap { position: relative; width: 100%; height: 200px; }
+
+    .table-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-title { font-size: 14px; font-weight: 500; }
+    .table-count { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 10px 20px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 11px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    .td-time { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+
+    .empty {
+      text-align: center; padding: 40px;
+      color: var(--text3); font-size: 13px;
+    }
+
+    .last-update { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+    @media (max-width: 520px) {
+      body { padding: 16px; }
+      .card-value { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🔥</div>
+    <div>
+      <h1>Smoke Monitor</h1>
+      <div class="subtitle">MQ-2 Sensor · ESP8266</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    <span class="live-text" id="live-text">รอข้อมูล</span>
+    <button class="btn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      รีเฟรช
+    </button>
+  </div>
+</div>
+
+<div class="url-section">
+  <span class="url-label">Google Sheet CSV</span>
+  <input class="url-input" id="sheet-url" type="text"
+    placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=0" />
+  <button class="btn-load" onclick="loadData()">โหลด</button>
+</div>
+
+<div class="metrics">
+  <div class="card status-card" id="status-card">
+    <div class="card-label">สถานะล่าสุด</div>
+    <div style="margin-bottom:6px;" id="m-status"><span class="pill normal"><span class="pill-dot" style="background:var(--green)"></span>รอข้อมูล</span></div>
+    <div class="card-sub" id="m-time">—</div>
+  </div>
+  <div class="card">
+    <div class="card-label">ครั้งที่พบควัน</div>
+    <div class="card-value" id="m-alerts" style="color:var(--amber);">—</div>
+    <div class="card-sub">รายการ</div>
+  </div>
+  <div class="card">
+    <div class="card-label">บันทึกทั้งหมด</div>
+    <div class="card-value" id="m-total" style="color:var(--blue);">—</div>
+    <div class="card-sub">แถว</div>
+  </div>
+  <div class="card">
+    <div class="card-label">อัปเดตล่าสุด</div>
+    <div class="card-value" style="font-size:16px;padding-top:4px;" id="m-lasttime">—</div>
+    <div class="card-sub" id="m-lastdate">—</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-header">
+    <span class="chart-title">สถานะควัน 20 รายการล่าสุด</span>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-box" style="background:#22c55e"></span>ปกติ</div>
+      <div class="legend-item"><span class="legend-box" style="background:#f59e0b"></span>เริ่มมีควัน/ปานกลาง</div>
+      <div class="legend-item"><span class="legend-box" style="background:#ef4444"></span>อันตราย</div>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="smokeChart" role="img" aria-label="กราฟสถานะควัน 20 รายการล่าสุด">กราฟสถานะควัน</canvas>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-header">
+    <span class="table-title">ประวัติการตรวจจับ</span>
+    <span class="table-count" id="tbl-count">0 รายการ</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:55%">วันเวลา</th>
+        <th>สถานะควัน</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body">
+      <tr><td colspan="2" class="empty">ใส่ URL Google Sheet แล้วกด โหลด</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+let chart = null;
+
+const SCORE = { "ปกติ":1, "เริ่มมีควัน":2, "ควันปานกลาง":3, "ควันหนาแน่น":4, "อันตรายมาก":5 };
+const COLOR = { 1:"#22c55e", 2:"#f59e0b", 3:"#f59e0b", 4:"#ef4444", 5:"#ef4444" };
+
+function pillOf(level) {
+  const d = ["ควันหนาแน่น","อันตรายมาก"];
+  const w = ["เริ่มมีควัน","ควันปานกลาง"];
+  if (d.includes(level)) return `<span class="pill danger"><span class="pill-dot" style="background:var(--red)"></span>${level}</span>`;
+  if (w.includes(level)) return `<span class="pill warn"><span class="pill-dot" style="background:var(--amber)"></span>${level}</span>`;
+  return `<span class="pill normal"><span class="pill-dot" style="background:var(--green)"></span>${level||"ปกติ"}</span>`;
+}
+
+function render(data) {
+  const last = data[data.length - 1];
+  const level = last[1];
+
+  document.getElementById("m-status").innerHTML = pillOf(level);
+  document.getElementById("m-time").textContent = last[0];
+
+  const sc = document.getElementById("status-card");
+  sc.className = "card status-card";
+  if (["ควันหนาแน่น","อันตรายมาก"].includes(level)) sc.classList.add("danger");
+  else if (["เริ่มมีควัน","ควันปานกลาง"].includes(level)) sc.classList.add("warn");
+  else sc.classList.add("normal");
+
+  document.getElementById("m-total").textContent = data.length;
+  document.getElementById("m-alerts").textContent = data.filter(r => r[1] !== "ปกติ").length;
+
+  const parts = last[0].split(" ");
+  document.getElementById("m-lasttime").textContent = parts[1] || "—";
+  document.getElementById("m-lastdate").textContent = parts[0] || "—";
+
+  document.getElementById("live-text").textContent = "Live";
+
+  const recent = data.slice(-20);
+  const labels = recent.map(r => r[0].slice(11,16));
+  const scores = recent.map(r => SCORE[r[1]] || 1);
+  const colors = scores.map(s => COLOR[s]);
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById("smokeChart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        data: scores,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+        label: "ระดับ"
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => recent[ctx.dataIndex][1] },
+          backgroundColor: "#1e2535",
+          titleColor: "#8b90a0",
+          bodyColor: "#e8eaf0",
+          borderColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: 6,
+          ticks: {
+            stepSize: 1,
+            color: "#5a5f6e",
+            font: { size: 11 },
+            callback: v => (["","ปกติ","เริ่มมีควัน","ปานกลาง","หนาแน่น","อันตราย",""][v] || "")
+          },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: "#5a5f6e", font: { size: 10 }, maxRotation: 45 }
+        }
+      }
+    }
+  });
+
+  const tbody = document.getElementById("tbl-body");
+  const rows = [...data].reverse().slice(0, 20);
+  document.getElementById("tbl-count").textContent = data.length + " รายการ";
+  tbody.innerHTML = rows.map(r =>
+    `<tr>
+      <td class="td-time">${r[0]}</td>
+      <td>${pillOf(r[1])}</td>
+    </tr>`
+  ).join("");
+}
+
+async function loadData() {
+  const url = document.getElementById("sheet-url").value.trim();
+  if (!url) { alert("กรุณาใส่ URL ของ Google Sheet ก่อนครับ"); return; }
+  document.getElementById("live-text").textContent = "กำลังโหลด...";
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    const lines = text.trim().split("\n").slice(1);
+    const data = lines
+      .map(l => { const c = l.split(","); return [c[0]?.trim(), (c[1]||"ปกติ").trim()]; })
+      .filter(r => r[0] && r[0].length > 0);
+    if (data.length) render(data);
+    else {
+      document.getElementById("live-text").textContent = "ไม่มีข้อมูล";
+      document.getElementById("tbl-body").innerHTML = '<tr><td colspan="2" class="empty">ยังไม่มีข้อมูลใน Sheet</td></tr>';
+    }
+  } catch(e) {
+    document.getElementById("live-text").textContent = "โหลดไม่ได้";
+    alert("โหลดข้อมูลไม่ได้ครับ — ตรวจสอบ URL และการแชร์ Sheet (ต้องเป็น Anyone can view)");
+  }
+}
+</script>
+</body>
+</html>
